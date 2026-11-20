@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KALINDI Live QR Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 15px;
+      background: #f5f5f5;
+    }
+
+    h2 {
+      color: #198754;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 450px;
+      margin: 20px auto;
+    }
+
+    button {
+      padding: 14px 24px;
+      font-size: 17px;
+      background: #198754;
+      color: white;
+      border: none;
+      border-radius: 7px;
+    }
+
+    #status {
+      margin: 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>KALINDI QR Scanner</h2>
+
+  <p>Point your phone camera at the QR code.</p>
+
+  <button id="startButton" onclick="startCamera()">
+    START CAMERA
+  </button>
+
+  <div id="reader"></div>
+
+  <div id="status">Ready to scan.</div>
+
+  <script>
+    let scanner = null;
+    let scanned = false;
+
+    function startCamera() {
+      document.getElementById('startButton').disabled = true;
+      document.getElementById('status').textContent =
+        'Opening camera...';
+
+      if (typeof Html5Qrcode === 'undefined') {
+        document.getElementById('status').textContent =
+          'QR scanner library not loaded.';
+        document.getElementById('startButton').disabled = false;
+        return;
+      }
+
+      scanner = new Html5Qrcode('reader');
+
+      scanner.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        function(decodedText) {
+
+          if (scanned) return;
+          scanned = true;
+
+          document.getElementById('status').textContent =
+            'QR detected: ' + decodedText;
+
+          scanner.stop().then(function() {
+
+            if (window.opener && !window.opener.closed) {
+              window.opener.postMessage(
+                {
+                  type: 'KALINDI_QR_RESULT',
+                  qr: decodedText
+                },
+                'https://script.google.com'
+              );
+
+              document.getElementById('status').textContent =
+                'QR sent to KALINDI successfully.';
+
+              setTimeout(function() {
+                window.close();
+              }, 800);
+
+            } else {
+              document.getElementById('status').textContent =
+                'KALINDI window not found. Please reopen scanner from KALINDI.';
+            }
+
+          }).catch(function(error) {
+            document.getElementById('status').textContent =
+              'Camera stop error: ' + error;
+          });
+
+        },
+        function() {
+          // Continue searching for a QR code.
+        }
+      ).catch(function(error) {
+        document.getElementById('status').textContent =
+          'Camera error: ' + error;
+
+        document.getElementById('startButton').disabled = false;
+      });
+    }
+  </script>
+
+</body>
+</html>
